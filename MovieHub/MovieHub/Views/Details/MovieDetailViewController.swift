@@ -191,7 +191,7 @@ final class MovieDetailViewController: UIViewController {
         favButton.translatesAutoresizingMaskIntoConstraints = false
         
         NSLayoutConstraint.activate([
-            titleLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 20),
+            titleLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 40),
             titleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
             titleLabel.trailingAnchor.constraint(equalTo: favButton.leadingAnchor, constant: -10),
             
@@ -357,14 +357,6 @@ final class MovieDetailViewController: UIViewController {
     }
     
     // MARK: - Actions
-//    @objc private func playTrailer() {
-//        guard let key = viewModel.trailerKey else { return }
-//        // Direct YouTube URL
-//        let urlString = "https://www.youtube.com/watch?v=\(key)"
-//        if let url = URL(string: urlString) {
-//            UIApplication.shared.open(url, options: [:], completionHandler: nil)
-//        }
-//    }
     @objc private func playTrailer() {
             guard let key = viewModel.trailerKey else { return }
             

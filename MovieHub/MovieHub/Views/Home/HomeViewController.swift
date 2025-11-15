@@ -40,6 +40,32 @@ final class HomeViewController: UIViewController, UITextFieldDelegate {
 
         return tf
     }()
+    
+    private let loader: UIActivityIndicatorView = {
+        let spinner = UIActivityIndicatorView(style: .large)
+        spinner.hidesWhenStopped = true
+        return spinner
+    }()
+
+    private let errorLabel: UILabel = {
+        let label = UILabel()
+        label.text = "No Internet Connection.\nPlease check your network."
+        label.numberOfLines = 0
+        label.textAlignment = .center
+        label.textColor = .darkGray
+        label.isHidden = true
+        return label
+    }()
+    
+    private let retryButton: UIButton = {
+        let btn = UIButton(type: .system)
+        btn.setTitle("Retry", for: .normal)
+        btn.titleLabel?.font = .systemFont(ofSize: 18, weight: .semibold)
+        btn.isHidden = true
+        return btn
+    }()
+
+
 
     private let tableView = UITableView()
     private let viewModel = HomeViewModel()
@@ -101,6 +127,31 @@ final class HomeViewController: UIViewController, UITextFieldDelegate {
             tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
+        
+        view.addSubview(loader)
+        loader.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            loader.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            loader.centerYAnchor.constraint(equalTo: view.centerYAnchor)
+        ])
+
+        view.addSubview(errorLabel)
+        errorLabel.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            errorLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            errorLabel.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            errorLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
+            errorLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20)
+        ])
+        
+        view.addSubview(retryButton)
+        retryButton.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            retryButton.topAnchor.constraint(equalTo: errorLabel.bottomAnchor, constant: 10),
+            retryButton.centerXAnchor.constraint(equalTo: view.centerXAnchor)
+        ])
+        retryButton.addTarget(self, action: #selector(retryFetch), for: .touchUpInside)
+
     }
 
     @objc private func dismissKeyboard() {
@@ -122,13 +173,41 @@ final class HomeViewController: UIViewController, UITextFieldDelegate {
             viewModel.searchMovies(query: text)
         }
     }
-
-
+    
     private func bindViewModel() {
         viewModel.onUpdate = { [weak self] in
-            self?.tableView.reloadData()
+            guard let self = self else { return }
+            self.loader.stopAnimating()
+            self.errorLabel.isHidden = true
+            self.tableView.reloadData()
         }
+
+        viewModel.isLoading = { [weak self] loading in
+            DispatchQueue.main.async {
+                loading ? self?.loader.startAnimating() : self?.loader.stopAnimating()
+                self?.errorLabel.isHidden = true
+            }
+        }
+
+
+        viewModel.onError = { [weak self] message in
+            DispatchQueue.main.async {
+                self?.loader.stopAnimating()
+                self?.errorLabel.text = message
+                self?.errorLabel.isHidden = false
+                self?.retryButton.isHidden = false
+            }
+        }
+
     }
+    
+    @objc private func retryFetch() {
+        errorLabel.isHidden = true
+        retryButton.isHidden = true
+        viewModel.fetchPopularMovies()
+    }
+
+
 }
 
 extension HomeViewController: UITableViewDataSource, UITableViewDelegate {
