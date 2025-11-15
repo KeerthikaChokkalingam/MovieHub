@@ -16,6 +16,3 @@ struct Movie: Decodable {
     let runtime: Int?
 }
 
-struct MovieDetail: Codable {
-    let runtime: Int?
-}

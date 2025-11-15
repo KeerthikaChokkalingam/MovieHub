@@ -47,4 +47,15 @@ final class HomeViewModel {
         }.resume()
     }
 
+    
+    func searchMovies(query: String) {
+            APIService.shared.searchMovies(query: query) { [weak self] movies in
+                DispatchQueue.main.async {
+                    self?.movies = movies
+                    self?.onUpdate?()
+                }
+            }
+        }
+
+
 }
