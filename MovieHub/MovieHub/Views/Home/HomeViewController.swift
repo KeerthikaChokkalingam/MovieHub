@@ -170,6 +170,15 @@ extension HomeViewController: UITableViewDataSource, UITableViewDelegate {
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         let movie = viewModel.movies[indexPath.row]
         let detailVC = MovieDetailViewController(movieId: movie.id)
+        detailVC.delegate = self
         self.navigationController?.pushViewController(detailVC, animated: true)
     }
+}
+
+extension HomeViewController: MovieDetailViewControllerDelegate {
+    func movieDetailViewController() {
+        self.tableView.reloadData()
+    }
+    
+    
 }

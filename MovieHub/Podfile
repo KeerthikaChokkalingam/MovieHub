@@ -1,0 +1,14 @@
+platform :ios, '13.0'
+
+target 'MovieHub' do
+  use_frameworks! :linkage => :static
+
+  pod 'youtube-ios-player-helper'
+
+  target 'MovieHubTests' do
+    inherit! :search_paths
+  end
+
+  target 'MovieHubUITests' do
+  end
+end

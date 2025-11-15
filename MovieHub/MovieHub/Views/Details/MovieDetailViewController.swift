@@ -7,12 +7,24 @@
 
 import UIKit
 import AVKit
+import WebKit
+import youtube_ios_player_helper
+
+protocol MovieDetailViewControllerDelegate: AnyObject {
+    func movieDetailViewController()
+}
 
 final class MovieDetailViewController: UIViewController {
     
+    weak var delegate: MovieDetailViewControllerDelegate?
+
     let movieId: Int
     private let viewModel = MovieDetailViewModel()
     
+    private var playerView: YTPlayerView?
+    
+    private var trailerWebView: WKWebView?
+
     private let bannerImage = UIImageView()
     
     private let playButton: UIButton = {
@@ -38,7 +50,7 @@ final class MovieDetailViewController: UIViewController {
     private let favButton: UIButton = {
         let btn = UIButton()
         btn.setImage(UIImage(systemName: "heart"), for: .normal)
-        btn.tintColor = .systemRed
+        btn.tintColor = .gray
         return btn
     }()
     
@@ -335,18 +347,49 @@ final class MovieDetailViewController: UIViewController {
             let item = createCastItem(name: c.name, image: c.profilePath)
             castStack.addArrangedSubview(item)
         }
+        
+        guard let detail = viewModel.movieDetail else { return }
+        
+        // Update heart button state
+        let heartImage = FavoriteManager.shared.isFavorite(id: detail.id) ? "heart.fill" : "heart"
+        favButton.setImage(UIImage(systemName: heartImage), for: .normal)
+            
     }
     
     // MARK: - Actions
+//    @objc private func playTrailer() {
+//        guard let key = viewModel.trailerKey else { return }
+//        // Direct YouTube URL
+//        let urlString = "https://www.youtube.com/watch?v=\(key)"
+//        if let url = URL(string: urlString) {
+//            UIApplication.shared.open(url, options: [:], completionHandler: nil)
+//        }
+//    }
     @objc private func playTrailer() {
-        guard let key = viewModel.trailerKey else { return }
-        let url = URL(string: "https://www.youtube.com/watch?v=\(key)")!
-        let vc = AVPlayerViewController()
-        vc.player = AVPlayer(url: url)
-        present(vc, animated: true) {
-            vc.player?.play()
+            guard let key = viewModel.trailerKey else { return }
+            
+            // Remove old player if any
+            playerView?.removeFromSuperview()
+            
+            // Create YTPlayerView
+            let player = YTPlayerView()
+            player.translatesAutoresizingMaskIntoConstraints = false
+            view.addSubview(player)
+            view.bringSubviewToFront(player)
+            
+            // Constrain it exactly over the banner
+            NSLayoutConstraint.activate([
+                player.topAnchor.constraint(equalTo: bannerImage.topAnchor),
+                player.leadingAnchor.constraint(equalTo: bannerImage.leadingAnchor),
+                player.trailingAnchor.constraint(equalTo: bannerImage.trailingAnchor),
+                player.bottomAnchor.constraint(equalTo: bannerImage.bottomAnchor)
+            ])
+            
+            playerView = player
+            
+            // Load video inline with autoplay
+            player.load(withVideoId: key, playerVars: ["playsinline": 1, "autoplay": 1])
         }
-    }
     
     private func createCastItem(name: String, image: String?) -> UIView {
             let view = UIView()
@@ -383,12 +426,36 @@ final class MovieDetailViewController: UIViewController {
             return view
         }
     
-    @objc private func toggleFavorite() {
-        favButton.isSelected.toggle()
-        let imageName = favButton.isSelected ? "heart.fill" : "heart"
-        favButton.setImage(UIImage(systemName: imageName), for: .normal)
-        // TODO: save favorite state
+    // MARK: - Favorite Handling
+    private var isFavorite: Bool {
+        get { FavoriteManager.shared.isFavorite(id: movieId) }
+        set {
+            if newValue {
+                guard let detail = viewModel.movieDetail else { return }
+                // Convert MovieDetail to Movie
+                let movie = Movie(
+                    id: detail.id,
+                    title: detail.title,
+                    vote_average: detail.voteAverage,
+                    poster_path: detail.posterPath,
+                    genre_ids: detail.genres.map { $0.id },
+                    runtime: detail.runtime
+                )
+                FavoriteManager.shared.addFavorite(movie: movie)
+            } else {
+                FavoriteManager.shared.removeFavorite(id: movieId)
+            }
+        }
     }
+
+    @objc private func toggleFavorite() {
+        isFavorite.toggle()
+        let imageName = isFavorite ? "heart.fill" : "heart"
+        favButton.tintColor = isFavorite ? .systemRed : .gray
+        favButton.setImage(UIImage(systemName: imageName), for: .normal)
+        delegate?.movieDetailViewController()
+    }
+
     
     private func createGenreChip(title: String) -> UIView {
         let label = PaddingLabel()
